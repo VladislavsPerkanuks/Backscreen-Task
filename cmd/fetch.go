@@ -1,0 +1,20 @@
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+)
+
+// fetchCmd represents the fetch command
+var fetchCmd = &cobra.Command{
+	Use:   "fetch",
+	Short: "Fetch latest currency rates from Bank.lv",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("fetch called")
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(fetchCmd)
+}
