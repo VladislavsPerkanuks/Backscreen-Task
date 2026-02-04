@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -23,4 +24,13 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	slog.SetDefault(
+		slog.New(
+			slog.NewJSONHandler(
+				os.Stdout,
+				&slog.HandlerOptions{Level: slog.LevelInfo},
+			),
+		),
+	)
 }

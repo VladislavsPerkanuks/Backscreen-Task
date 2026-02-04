@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/api"
+	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/middleware"
 	"github.com/spf13/cobra"
 )
 
@@ -25,18 +27,17 @@ func init() {
 }
 
 func runServer(cmd *cobra.Command, args []string) {
+	apiController := api.NewAPI(nil)
+
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("GET /api/v1/rates/latest", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Latest rates endpoint")) // nolint:errcheck // will be replaced soon
-	})
+	mux.HandleFunc("GET /api/v1/rates/latest", apiController.LatestRateHandler)
+	mux.HandleFunc("GET /api/v1/rates/history/{currency}", apiController.HistoryRateHandler)
 
-	mux.HandleFunc("GET /api/v1/rates/history/{currency}", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Historical rates endpoint for currency")) // nolint:errcheck // will be replaced soon
-	})
+	handler := middleware.LoggingMiddleware(mux)
 
 	slog.Info(fmt.Sprintf("Server starting on :%d", port))
-	if err := http.ListenAndServe(":"+strconv.Itoa(port), mux); err != nil {
+	if err := http.ListenAndServe(":"+strconv.Itoa(port), handler); err != nil {
 		slog.Error("Server failed to start", "error", err)
 	}
 }
