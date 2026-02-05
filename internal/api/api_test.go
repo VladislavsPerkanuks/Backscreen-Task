@@ -1,106 +1,180 @@
 package api
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/models"
 	"github.com/stretchr/testify/require"
 )
 
-type mockRateService struct {
-	getLatestRatesFn     func() (map[string]float64, error)
-	getHistoricalRatesFn func(currency string) ([]float64, error)
+type mockRateReader struct {
+	latestRates     []models.ExchangeRate
+	latestErr       error
+	historicalRates []models.ExchangeRate
+	historicalErr   error
 }
 
-func (m *mockRateService) GetLatestRates() (map[string]float64, error) {
-	return m.getLatestRatesFn()
+func (m *mockRateReader) GetLatestRates(ctx context.Context) ([]models.ExchangeRate, error) {
+	return m.latestRates, m.latestErr
 }
 
-func (m *mockRateService) GetHistoricalRates(currency string) ([]float64, error) {
-	return m.getHistoricalRatesFn(currency)
+func (m *mockRateReader) GetHistoricalRates(ctx context.Context, currency string) ([]models.ExchangeRate, error) {
+	return m.historicalRates, m.historicalErr
 }
 
 func TestLatestRateHandler(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC().Truncate(time.Minute) // Truncate to avoid precision issues
 	tests := []struct {
 		name           string
-		mockFn         func() (map[string]float64, error)
+		mockRates      []models.ExchangeRate
+		mockErr        error
 		expectedStatus int
-		expectedBody   any
+		expectedBody   string
 	}{
 		{
 			name: "Success",
-			mockFn: func() (map[string]float64, error) {
-				return map[string]float64{"USD": 1.0, "EUR": 0.85}, nil
+			mockRates: []models.ExchangeRate{
+				{Currency: "USD", Rate: 1.1, Date: now},
+				{Currency: "GBP", Rate: 99.9, Date: now},
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   map[string]any{"USD": 1.0, "EUR": 0.85},
+			expectedBody: `
+			{
+				"rates": [
+					{
+						"currency": "USD",
+						"rate": 1.1,
+						"date": "` + now.Format(time.RFC3339) + `"
+					},
+					{
+						"currency": "GBP",
+						"rate": 99.9,
+						"date": "` + now.Format(time.RFC3339) + `"
+					}
+				],
+				"updated_at": "` + now.Format(time.RFC3339) + `"
+			}`,
 		},
 		{
-			name: "Service Error",
-			mockFn: func() (map[string]float64, error) {
-				return nil, errors.New("provider failure")
-			},
+			name:           "Error - Fetch Failed",
+			mockErr:        errors.New("db error"),
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   map[string]any{"error": "Internal Server Error"},
+			expectedBody: `
+			{
+				"error": "failed to fetch latest rates"
+			}`,
+		},
+		{
+			name:           "Error - No Rates",
+			mockRates:      []models.ExchangeRate{},
+			expectedStatus: http.StatusNotFound,
+			expectedBody: `
+			{
+				"error": "no rates found"
+			}`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-
-			svc := &mockRateService{getLatestRatesFn: tt.mockFn}
-			api := NewAPI(svc)
+			mock := &mockRateReader{
+				latestRates: tt.mockRates,
+				latestErr:   tt.mockErr,
+			}
+			api := NewAPI(mock)
 
 			req := httptest.NewRequest(http.MethodGet, "/latest", nil)
-			w := httptest.NewRecorder()
+			rr := httptest.NewRecorder()
 
-			api.LatestRateHandler(w, req)
+			api.LatestRateHandler(rr, req)
 
-			require.Equal(t, tt.expectedStatus, w.Code, "unexpected status code")
-
-			var resp map[string]any
-			require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
-			require.Equal(t, tt.expectedBody, resp)
+			require.Equal(t, tt.expectedStatus, rr.Code)
+			require.NotNil(t, req.Body)
+			require.JSONEq(t, tt.expectedBody, rr.Body.String())
 		})
 	}
 }
 
 func TestHistoryRateHandler(t *testing.T) {
+	t.Parallel()
+
+	now := time.Now().UTC().Truncate(time.Minute) // Truncate to avoid precision issues
 	tests := []struct {
 		name           string
 		currency       string
-		mockFn         func(string) ([]float64, error)
+		mockRates      []models.ExchangeRate
+		mockErr        error
 		expectedStatus int
-		expectedBody   any
+		expectedBody   string
 	}{
 		{
 			name:     "Success",
 			currency: "USD",
-			mockFn: func(c string) ([]float64, error) {
-				return []float64{1.1, 1.2, 1.3}, nil
+			mockRates: []models.ExchangeRate{
+				{Currency: "USD", Rate: 1.1, Date: now},
+				{Currency: "USD", Rate: 1.2, Date: now.Add(-24 * time.Hour)},
+				{Currency: "USD", Rate: 1.3, Date: now.Add(-48 * time.Hour)},
 			},
 			expectedStatus: http.StatusOK,
-			expectedBody:   []float64{1.1, 1.2, 1.3},
+			expectedBody: `
+			{
+				"currency": "USD",
+				"history": [
+					{
+						"currency": "USD",
+						"rate": 1.1,
+						"date": "` + now.Format(time.RFC3339) + `"
+					},
+					{
+						"currency": "USD",
+						"rate": 1.2,
+						"date": "` + now.Add(-24*time.Hour).Format(time.RFC3339) + `"
+					},
+					{
+						"currency": "USD",
+						"rate": 1.3,
+						"date": "` + now.Add(-48*time.Hour).Format(time.RFC3339) + `"
+					}
+				]
+			}
+			`,
 		},
 		{
-			name:           "Invalid Currency Length",
+			name:           "Error - Invalid Currency Format",
 			currency:       "US",
-			mockFn:         nil,
 			expectedStatus: http.StatusBadRequest,
-			expectedBody:   map[string]string{"error": "invalid currency format: must be 3 characters"},
+			expectedBody: `
+			{
+				"error": "invalid currency format"
+			}`,
 		},
 		{
-			name:     "Service Error",
-			currency: "EUR",
-			mockFn: func(c string) ([]float64, error) {
-				return nil, errors.New("database failure")
-			},
+			name:           "Error - Fetch Failed",
+			currency:       "USD",
+			mockErr:        errors.New("db error"),
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody:   map[string]string{"error": "Internal Server Error"},
+			expectedBody: `
+			{
+				"error": "failed to fetch historical rates"
+			}`,
+		},
+		{
+			name:           "Error - No Rates Found",
+			currency:       "GBP",
+			mockRates:      []models.ExchangeRate{},
+			expectedStatus: http.StatusNotFound,
+			expectedBody: `
+			{
+				"error": "no rates found for currency: GBP"
+			}`,
 		},
 	}
 
@@ -108,28 +182,22 @@ func TestHistoryRateHandler(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			svc := &mockRateService{getHistoricalRatesFn: tt.mockFn}
-			api := NewAPI(svc)
+			mock := &mockRateReader{
+				historicalRates: tt.mockRates,
+				historicalErr:   tt.mockErr,
+			}
+			api := NewAPI(mock)
 
 			req := httptest.NewRequest(http.MethodGet, "/history/"+tt.currency, nil)
 			req.SetPathValue("currency", tt.currency)
-			w := httptest.NewRecorder()
 
-			api.HistoryRateHandler(w, req)
+			rr := httptest.NewRecorder()
 
-			require.Equal(t, tt.expectedStatus, w.Code)
+			api.HistoryRateHandler(rr, req)
 
-			if tt.expectedStatus == http.StatusOK {
-				var resp []float64
-				require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
-				require.Equal(t, tt.expectedBody, resp)
-
-				return
-			}
-
-			var resp map[string]string
-			require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
-			require.Equal(t, tt.expectedBody, resp)
+			require.Equal(t, tt.expectedStatus, rr.Code)
+			require.NotNil(t, req.Body)
+			require.JSONEq(t, tt.expectedBody, rr.Body.String())
 		})
 	}
 }

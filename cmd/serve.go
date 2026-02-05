@@ -1,10 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/api"
 	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/middleware"
@@ -27,7 +32,7 @@ func init() {
 }
 
 func runServer(cmd *cobra.Command, args []string) {
-	apiController := api.NewAPI(nil)
+	apiController := api.NewAPI(nil) // TODO
 
 	mux := http.NewServeMux()
 
@@ -36,8 +41,35 @@ func runServer(cmd *cobra.Command, args []string) {
 
 	handler := middleware.LoggingMiddleware(mux)
 
-	slog.Info(fmt.Sprintf("Server starting on :%d", port))
-	if err := http.ListenAndServe(":"+strconv.Itoa(port), handler); err != nil {
-		slog.Error("Server failed to start", "error", err)
+	server := &http.Server{
+		Addr:    ":" + strconv.Itoa(port),
+		Handler: handler,
 	}
+
+	// Channel to listen for interrupt or terminate signals
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		slog.Info(fmt.Sprintf("Server starting on :%d", port))
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("Server failed to start", "error", err)
+
+			os.Exit(1)
+		}
+	}()
+
+	<-stop
+
+	slog.Info("Server shutting down...")
+
+	// Create a context with a timeout for the shutdown process
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		slog.Error("Server shutdown failed", "error", err)
+	}
+
+	slog.Info("Server stopped")
 }
