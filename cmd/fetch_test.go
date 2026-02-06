@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/models"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,6 +34,10 @@ func (m *mockFetcher) GetHistoricalRates(ctx context.Context, currency string) (
 	return m.latestRates, nil
 }
 
+func (m *mockFetcher) SaveRate(ctx context.Context, rate models.ExchangeRate) error {
+	return nil
+}
+
 func TestExecuteFetch(t *testing.T) {
 	t.Parallel()
 
@@ -49,57 +54,57 @@ func TestExecuteFetch(t *testing.T) {
 			currencies: []string{"USD", "EUR", "GBP", "JPY", "AUD", "CAD", "CHF", "CNY", "SEK", "NZD"},
 			mockFetcher: &mockFetcher{
 				latestRates: []models.ExchangeRate{
-					{Currency: "USD", Rate: 1.15, Date: now},
-					{Currency: "EUR", Rate: 1.15, Date: now},
-					{Currency: "GBP", Rate: 1.15, Date: now},
-					{Currency: "JPY", Rate: 1.15, Date: now},
-					{Currency: "AUD", Rate: 1.15, Date: now},
-					{Currency: "CAD", Rate: 1.15, Date: now},
-					{Currency: "CHF", Rate: 1.15, Date: now},
-					{Currency: "CNY", Rate: 1.15, Date: now},
-					{Currency: "SEK", Rate: 1.15, Date: now},
-					{Currency: "NZD", Rate: 1.15, Date: now},
+					{Currency: "USD", Rate: decimal.NewFromFloat(1.15), Date: now},
+					{Currency: "EUR", Rate: decimal.NewFromFloat(1.15), Date: now},
+					{Currency: "GBP", Rate: decimal.NewFromFloat(1.15), Date: now},
+					{Currency: "JPY", Rate: decimal.NewFromFloat(1.15), Date: now},
+					{Currency: "AUD", Rate: decimal.NewFromFloat(1.15), Date: now},
+					{Currency: "CAD", Rate: decimal.NewFromFloat(1.15), Date: now},
+					{Currency: "CHF", Rate: decimal.NewFromFloat(1.15), Date: now},
+					{Currency: "CNY", Rate: decimal.NewFromFloat(1.15), Date: now},
+					{Currency: "SEK", Rate: decimal.NewFromFloat(1.15), Date: now},
+					{Currency: "NZD", Rate: decimal.NewFromFloat(1.15), Date: now},
 				},
 			},
 			expected: []models.ExchangeRate{
 				{
-					Currency: "USD", Rate: 1.15,
+					Currency: "USD", Rate: decimal.NewFromFloat(1.15),
 					Date: now,
 				},
 				{
-					Currency: "EUR", Rate: 1.15,
+					Currency: "EUR", Rate: decimal.NewFromFloat(1.15),
 					Date: now,
 				},
 				{
-					Currency: "GBP", Rate: 1.15,
+					Currency: "GBP", Rate: decimal.NewFromFloat(1.15),
 					Date: now,
 				},
 				{
-					Currency: "JPY", Rate: 1.15,
+					Currency: "JPY", Rate: decimal.NewFromFloat(1.15),
 					Date: now,
 				},
 				{
-					Currency: "AUD", Rate: 1.15,
+					Currency: "AUD", Rate: decimal.NewFromFloat(1.15),
 					Date: now,
 				},
 				{
-					Currency: "CAD", Rate: 1.15,
+					Currency: "CAD", Rate: decimal.NewFromFloat(1.15),
 					Date: now,
 				},
 				{
-					Currency: "CHF", Rate: 1.15,
+					Currency: "CHF", Rate: decimal.NewFromFloat(1.15),
 					Date: now,
 				},
 				{
-					Currency: "CNY", Rate: 1.15,
+					Currency: "CNY", Rate: decimal.NewFromFloat(1.15),
 					Date: now,
 				},
 				{
-					Currency: "SEK", Rate: 1.15,
+					Currency: "SEK", Rate: decimal.NewFromFloat(1.15),
 					Date: now,
 				},
 				{
-					Currency: "NZD", Rate: 1.15,
+					Currency: "NZD", Rate: decimal.NewFromFloat(1.15),
 					Date: now,
 				},
 			},
@@ -112,7 +117,7 @@ func TestExecuteFetch(t *testing.T) {
 
 			ctx := t.Context()
 
-			rates, err := executeFetch(ctx, tt.mockFetcher, tt.currencies)
+			rates, err := executeFetch(ctx, tt.mockFetcher, tt.mockFetcher, tt.currencies)
 			require.NoError(t, err)
 
 			require.ElementsMatch(t, tt.expected, rates)

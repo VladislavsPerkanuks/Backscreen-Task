@@ -1,0 +1,36 @@
+services:
+  # app:
+  #   build: .
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     - DB_HOST=mariadb
+  #     - DB_PORT=3306
+  #     - DB_USER=currency
+  #     - DB_PASSWORD=currency_secret
+  #     - DB_NAME=currency_service
+  #     - SERVER_PORT=8080
+  #   depends_on:
+  #     mariadb:
+  #       condition: service_healthy
+  #   command: ["serve"]
+  #   restart: unless-stopped
+
+  mariadb:
+    image: mariadb:12.1.2
+    environment:
+      - MYSQL_ROOT_PASSWORD=currency
+      - MYSQL_DATABASE=currency_service
+      - MYSQL_USER=currency
+      - MYSQL_PASSWORD=currency
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./migrations/0001_initial.up.sql:/docker-entrypoint-initdb.d/0001_initial.up.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped

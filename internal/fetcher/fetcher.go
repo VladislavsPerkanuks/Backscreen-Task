@@ -8,11 +8,11 @@ import (
 	"log/slog"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/models"
+	"github.com/shopspring/decimal"
 	"golang.org/x/net/html/charset"
 )
 
@@ -33,15 +33,21 @@ type Item struct {
 // ----------------------------------------------------------------------------------------------
 
 type BankLatviaFetcher struct {
+	logger *slog.Logger
 	client *http.Client
 	url    string
 }
 
-func NewBankLatviaFetcher(client *http.Client, url string) *BankLatviaFetcher {
-	return &BankLatviaFetcher{
+func NewBankLatviaFetcher(logger *slog.Logger, client *http.Client, url string) *BankLatviaFetcher {
+	b := &BankLatviaFetcher{
+		logger: logger,
 		client: client,
 		url:    url,
 	}
+
+	b.logger = b.logger.With(slog.String("fetcher", "BankLatviaFetcher"), slog.String("url", url))
+
+	return b
 }
 
 const (
@@ -132,9 +138,9 @@ func (b *BankLatviaFetcher) parseRates(description string, date time.Time) ([]mo
 	for i := 0; i < len(fields); i += 2 {
 		currency, rateStr := fields[i], fields[i+1]
 
-		rate, err := strconv.ParseFloat(rateStr, 64)
+		rate, err := decimal.NewFromString(rateStr)
 		if err != nil {
-			slog.Error("failed to parse rate", "currency", currency, "rateStr", rateStr, "err", err)
+			b.logger.Error("failed to parse rate", "currency", currency, "rateStr", rateStr, "err", err)
 			continue
 		}
 
@@ -156,8 +162,10 @@ func (b *BankLatviaFetcher) parseRates(description string, date time.Time) ([]mo
 func (b *BankLatviaFetcher) parseDate(dateStr string) time.Time {
 	t, err := time.Parse(dateLayout, dateStr)
 	if err != nil {
+		b.logger.Error("failed to parse date", "dateStr", dateStr, "err", err)
+
 		return time.Time{} // Return zero time on error
 	}
 
-	return t
+	return t.UTC() // Ensure consistent timezone
 }

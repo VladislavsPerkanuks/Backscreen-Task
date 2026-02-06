@@ -25,7 +25,7 @@ const (
 	requestIDKey contextKey = "reqID"
 )
 
-func LoggingMiddleware(next http.Handler) http.Handler {
+func LoggingMiddleware(logger *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 
@@ -38,7 +38,7 @@ func LoggingMiddleware(next http.Handler) http.Handler {
 
 		// Attach to context & logger
 		ctx := context.WithValue(r.Context(), requestIDKey, reqID)
-		logger := slog.Default().With("reqID", reqID)
+		logger := logger.With("reqID", reqID)
 
 		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
 
