@@ -85,7 +85,7 @@ func (b *BankLatviaFetcher) GetLatestCurrencyRate(ctx context.Context, currency 
 	})
 
 	if idx == -1 {
-		return models.ExchangeRate{}, ErrRateNotFound
+		return models.ExchangeRate{}, fmt.Errorf("%w '%s'", ErrRateNotFound, currency)
 	}
 
 	return rates[idx], nil

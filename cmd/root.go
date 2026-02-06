@@ -41,7 +41,7 @@ func Execute() {
 
 	defer repo.Close() // nolint:errcheck // We can't do much about a close error here
 
-	rootCmd.AddCommand(NewFetchCmd(logger, &cfg.Database, repo))
+	rootCmd.AddCommand(NewFetchCmd(logger, repo))
 	rootCmd.AddCommand(NewServeCmd(logger, &cfg.Server, repo))
 
 	err = rootCmd.Execute()

@@ -1,20 +1,40 @@
 services:
-  # app:
-  #   build: .
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - DB_HOST=mariadb
-  #     - DB_PORT=3306
-  #     - DB_USER=currency
-  #     - DB_PASSWORD=currency_secret
-  #     - DB_NAME=currency_service
-  #     - SERVER_PORT=8080
-  #   depends_on:
-  #     mariadb:
-  #       condition: service_healthy
-  #   command: ["serve"]
-  #   restart: unless-stopped
+  app-serve:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - CURRENCY_SERVICE_DB_HOST=mariadb
+      - CURRENCY_SERVICE_DB_PORT=3306
+      - CURRENCY_SERVICE_DB_USER=currency
+      - CURRENCY_SERVICE_DB_PASSWORD=currency
+      - CURRENCY_SERVICE_DB_NAME=currency_service
+      - CURRENCY_SERVICE_SERVER_PORT=8080
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    command: ["serve"]
+    restart: unless-stopped
+
+  # prepopulate the database with initial data before starting the server
+  app-fetch:
+    build: .
+    environment:
+      - CURRENCY_SERVICE_DB_HOST=mariadb
+      - CURRENCY_SERVICE_DB_PORT=3306
+      - CURRENCY_SERVICE_DB_USER=currency
+      - CURRENCY_SERVICE_DB_PASSWORD=currency
+      - CURRENCY_SERVICE_DB_NAME=currency_service
+      - CURRENCY_SERVICE_SERVER_PORT=8080
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    command: [
+        "fetch",
+        "--currencies",
+        "AUD,BRL,CAD,CHF,CNY,CZK,DKK,GBP,HKD,HUF",
+      ] # fetch 10 currencies in "paralell"
+    restart: no # do not restart the fetch service, it should run once and exit
 
   mariadb:
     image: mariadb:12.1.2

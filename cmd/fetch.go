@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/config"
 	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/fetcher"
 	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/models"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type ExchangeRateFetcher interface {
@@ -29,8 +29,8 @@ type fetchResult struct {
 	Err  error
 }
 
-func NewFetchCmd(logger *slog.Logger, cfg *config.DatabaseConfig, writerSvc ExchangeRateWriter) *cobra.Command {
-	return &cobra.Command{
+func NewFetchCmd(logger *slog.Logger, writerSvc ExchangeRateWriter) *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "fetch",
 		Short: "Fetch latest currency rates from Bank.lv",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -39,8 +39,7 @@ func NewFetchCmd(logger *slog.Logger, cfg *config.DatabaseConfig, writerSvc Exch
 			ctx, cancel := context.WithTimeout(cmd.Context(), 20*time.Second)
 			defer cancel()
 
-			currencies := []string{"USD", "GBP", "JPY"}
-			rates, err := executeFetch(ctx, fetcherSvc, writerSvc, currencies)
+			rates, err := executeFetch(ctx, fetcherSvc, writerSvc, viper.GetStringSlice("currencies"))
 			if err != nil {
 				return fmt.Errorf("failed to fetch rates: %w", err)
 			}
@@ -52,6 +51,16 @@ func NewFetchCmd(logger *slog.Logger, cfg *config.DatabaseConfig, writerSvc Exch
 			return nil
 		},
 	}
+
+	// ------------ Flags --------------------
+
+	cmd.Flags().StringSliceP("currencies", "c", []string{"USD", "GBP", "JPY"}, "Comma-separated list of currency codes to fetch")
+
+	if err := viper.BindPFlag("currencies", cmd.Flags().Lookup("currencies")); err != nil {
+		logger.Error("bind flag failed", "flag", "currencies", "error", err)
+	}
+
+	return cmd
 }
 
 func executeFetch(

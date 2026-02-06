@@ -72,7 +72,8 @@ func Load(logger *slog.Logger) (*Config, error) {
 		slog.String("db_host", cfg.Database.Host),
 		slog.Int("db_port", cfg.Database.Port),
 		slog.String("db_name", cfg.Database.Name),
-		slog.Int("server_port", cfg.Server.Port))
+		slog.Int("server_port", cfg.Server.Port),
+	)
 
 	return cfg, nil
 }
