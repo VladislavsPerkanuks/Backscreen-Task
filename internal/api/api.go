@@ -13,13 +13,19 @@ import (
 )
 
 type API struct {
+	logger     *slog.Logger
 	rateReader RateReader
 }
 
-func NewAPI(rateReader RateReader) *API {
-	return &API{
+func NewAPI(logger *slog.Logger, rateReader RateReader) *API {
+	a := &API{
+		logger:     logger,
 		rateReader: rateReader,
 	}
+
+	a.logger = a.logger.With(slog.String("component", "API"))
+
+	return a
 }
 
 // LatestRatesResponse represents the API response for latest rates
@@ -45,14 +51,14 @@ func (a *API) jsonResponse(w http.ResponseWriter, status int, data any) {
 	w.WriteHeader(status)
 
 	if err := json.NewEncoder(w).Encode(data); err != nil {
-		slog.Error("json encode failed", "err", err)
+		a.logger.Error("json encode failed", "err", err)
 
 		return
 	}
 }
 
 func (a *API) errorResponse(w http.ResponseWriter, status int, err error, userMsg string) {
-	slog.Error("handler error", slog.Any("error", err), slog.Int("status", status))
+	a.logger.Error("handler error", slog.Any("error", err), slog.Int("status", status))
 	a.jsonResponse(w, status, map[string]string{"error": userMsg})
 }
 

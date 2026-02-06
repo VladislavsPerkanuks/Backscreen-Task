@@ -3,12 +3,14 @@ package api
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/models"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 )
 
@@ -41,8 +43,8 @@ func TestLatestRateHandler(t *testing.T) {
 		{
 			name: "Success",
 			mockRates: []models.ExchangeRate{
-				{Currency: "USD", Rate: 1.1, Date: now},
-				{Currency: "GBP", Rate: 99.9, Date: now},
+				{Currency: "USD", Rate: decimal.RequireFromString("1.1"), Date: now},
+				{Currency: "GBP", Rate: decimal.RequireFromString("99.9"), Date: now},
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: `
@@ -50,12 +52,12 @@ func TestLatestRateHandler(t *testing.T) {
 				"rates": [
 					{
 						"currency": "USD",
-						"rate": 1.1,
+						"rate": "1.1",
 						"date": "` + now.Format(time.RFC3339) + `"
 					},
 					{
 						"currency": "GBP",
-						"rate": 99.9,
+						"rate": "99.9",
 						"date": "` + now.Format(time.RFC3339) + `"
 					}
 				],
@@ -89,7 +91,7 @@ func TestLatestRateHandler(t *testing.T) {
 				latestRates: tt.mockRates,
 				latestErr:   tt.mockErr,
 			}
-			api := NewAPI(mock)
+			api := NewAPI(slog.Default(), mock)
 
 			req := httptest.NewRequest(http.MethodGet, "/latest", nil)
 			rr := httptest.NewRecorder()
@@ -119,9 +121,9 @@ func TestHistoryRateHandler(t *testing.T) {
 			name:     "Success",
 			currency: "USD",
 			mockRates: []models.ExchangeRate{
-				{Currency: "USD", Rate: 1.1, Date: now},
-				{Currency: "USD", Rate: 1.2, Date: now.Add(-24 * time.Hour)},
-				{Currency: "USD", Rate: 1.3, Date: now.Add(-48 * time.Hour)},
+				{Currency: "USD", Rate: decimal.RequireFromString("1.1"), Date: now},
+				{Currency: "USD", Rate: decimal.RequireFromString("1.2"), Date: now.Add(-24 * time.Hour)},
+				{Currency: "USD", Rate: decimal.RequireFromString("1.3"), Date: now.Add(-48 * time.Hour)},
 			},
 			expectedStatus: http.StatusOK,
 			expectedBody: `
@@ -130,17 +132,17 @@ func TestHistoryRateHandler(t *testing.T) {
 				"history": [
 					{
 						"currency": "USD",
-						"rate": 1.1,
+						"rate": "1.1",
 						"date": "` + now.Format(time.RFC3339) + `"
 					},
 					{
 						"currency": "USD",
-						"rate": 1.2,
+						"rate": "1.2",
 						"date": "` + now.Add(-24*time.Hour).Format(time.RFC3339) + `"
 					},
 					{
 						"currency": "USD",
-						"rate": 1.3,
+						"rate": "1.3",
 						"date": "` + now.Add(-48*time.Hour).Format(time.RFC3339) + `"
 					}
 				]
@@ -186,7 +188,7 @@ func TestHistoryRateHandler(t *testing.T) {
 				historicalRates: tt.mockRates,
 				historicalErr:   tt.mockErr,
 			}
-			api := NewAPI(mock)
+			api := NewAPI(slog.Default(), mock)
 
 			req := httptest.NewRequest(http.MethodGet, "/history/"+tt.currency, nil)
 			req.SetPathValue("currency", tt.currency)
