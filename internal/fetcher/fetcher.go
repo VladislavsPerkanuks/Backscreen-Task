@@ -59,8 +59,8 @@ var (
 	ErrRateNotFound = errors.New("rate not found for currency")
 )
 
-// GetLatestRates returns the most recent exchange rates
-func (b *BankLatviaFetcher) GetLatestRates(ctx context.Context) ([]models.ExchangeRate, error) {
+// GetAllRates returns all exchange rates from the feed grouped by date
+func (b *BankLatviaFetcher) GetAllRates(ctx context.Context) ([][]models.ExchangeRate, error) {
 	items, err := b.fetchRSS(ctx)
 	if err != nil {
 		return nil, err
@@ -70,25 +70,48 @@ func (b *BankLatviaFetcher) GetLatestRates(ctx context.Context) ([]models.Exchan
 		return nil, ErrNoRatesFound
 	}
 
-	latestItem := b.findLatestItem(items)
-	return b.parseRates(latestItem.Description, b.parseDate(latestItem.PubDate))
+	var allRates [][]models.ExchangeRate
+	for _, item := range items {
+		rates, err := b.parseRates(item.Description, b.parseDate(item.PubDate))
+		if err != nil {
+			b.logger.Warn("failed to parse rates for item", "date", item.PubDate, "err", err)
+
+			continue
+		}
+
+		allRates = append(allRates, rates)
+	}
+
+	return allRates, nil
 }
 
-func (b *BankLatviaFetcher) GetLatestCurrencyRate(ctx context.Context, currency string) (models.ExchangeRate, error) {
-	rates, err := b.GetLatestRates(ctx)
+func (b *BankLatviaFetcher) GetCurrencyRates(ctx context.Context, currency string) ([]models.ExchangeRate, error) {
+	items, err := b.fetchRSS(ctx)
 	if err != nil {
-		return models.ExchangeRate{}, fmt.Errorf("get latest rates: %w", err)
+		return nil, err
 	}
 
-	idx := slices.IndexFunc(rates, func(r models.ExchangeRate) bool {
-		return r.Currency == currency
-	})
+	var currencyRates []models.ExchangeRate
+	for _, item := range items {
+		rates, err := b.parseRates(item.Description, b.parseDate(item.PubDate))
+		if err != nil {
+			continue
+		}
 
-	if idx == -1 {
-		return models.ExchangeRate{}, fmt.Errorf("%w '%s'", ErrRateNotFound, currency)
+		idx := slices.IndexFunc(rates, func(r models.ExchangeRate) bool {
+			return r.Currency == currency
+		})
+
+		if idx != -1 {
+			currencyRates = append(currencyRates, rates[idx])
+		}
 	}
 
-	return rates[idx], nil
+	if len(currencyRates) == 0 {
+		return nil, fmt.Errorf("%w '%s'", ErrRateNotFound, currency)
+	}
+
+	return currencyRates, nil
 }
 
 func (b *BankLatviaFetcher) fetchRSS(ctx context.Context) ([]Item, error) {
@@ -118,16 +141,6 @@ func (b *BankLatviaFetcher) fetchRSS(ctx context.Context) ([]Item, error) {
 	return rss.Channel.Items, nil
 }
 
-func (b *BankLatviaFetcher) findLatestItem(items []Item) Item {
-	if len(items) == 0 {
-		return Item{}
-	}
-
-	return slices.MaxFunc(items, func(item1, item2 Item) int {
-		return b.parseDate(item1.PubDate).Compare(b.parseDate(item2.PubDate))
-	})
-}
-
 // parseRates parses the description field into a slice of models.ExchangeRate
 // Format: "AUD 1.70010000 BRL 6.22330000 CAD 1.61200000 ..."
 func (b *BankLatviaFetcher) parseRates(description string, date time.Time) ([]models.ExchangeRate, error) {
@@ -141,6 +154,7 @@ func (b *BankLatviaFetcher) parseRates(description string, date time.Time) ([]mo
 		rate, err := decimal.NewFromString(rateStr)
 		if err != nil {
 			b.logger.Error("failed to parse rate", "currency", currency, "rateStr", rateStr, "err", err)
+
 			continue
 		}
 

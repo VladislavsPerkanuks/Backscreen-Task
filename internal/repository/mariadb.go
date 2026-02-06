@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/config"
 	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/models"
@@ -43,18 +44,32 @@ func NewMariaDBRepository(cfg config.DatabaseConfig, logger *slog.Logger) (*Mari
 }
 
 func (r *MariaDBRepository) SaveRate(ctx context.Context, rate models.ExchangeRate) error {
-	query := `INSERT INTO exchange_rates (currency, rate, date) VALUES (?, ?, ?)
-              ON DUPLICATE KEY UPDATE rate = VALUES(rate)`
+	return r.SaveRates(ctx, []models.ExchangeRate{rate})
+}
 
-	_, err := r.db.ExecContext(ctx, query, rate.Currency, rate.Rate, rate.Date)
-	if err != nil {
-		r.logger.Error("save exchange rate",
-			slog.String("currency", rate.Currency),
-			slog.Any("error", err))
-
-		return fmt.Errorf("save rate for %s: %w", rate.Currency, err)
+func (r *MariaDBRepository) SaveRates(ctx context.Context, rates []models.ExchangeRate) error {
+	if len(rates) == 0 {
+		return nil
 	}
 
+	placeholders := make([]string, 0, len(rates))
+	args := make([]interface{}, 0, len(rates)*3)
+
+	for _, rate := range rates {
+		placeholders = append(placeholders, "(?, ?, ?)")
+		args = append(args, rate.Currency, rate.Rate, rate.Date)
+	}
+
+	query := fmt.Sprintf(
+		"INSERT INTO exchange_rates (currency, rate, date) VALUES %s ON DUPLICATE KEY UPDATE rate = VALUES(rate)",
+		strings.Join(placeholders, ","),
+	)
+
+	_, err := r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		r.logger.Error("failed bulk upsert", "count", len(rates), "err", err)
+		return err
+	}
 	return nil
 }
 

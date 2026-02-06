@@ -51,53 +51,88 @@ const mockRSS = `<?xml version="1.0" encoding="utf-8"?>
 	</channel>
 </rss>`
 
-func TestGetLatestRates(t *testing.T) {
+func TestGetAllRates(t *testing.T) {
 	t.Parallel()
 
-	latestDate, _ := time.Parse(time.RFC1123Z, "Tue, 03 Feb 2026 02:00:00 +0200")
-	latestDate = latestDate.UTC()
+	date1, _ := time.Parse(time.RFC1123Z, "Mon, 02 Feb 2026 02:00:00 +0200")
+	date1 = date1.UTC()
+	date2, _ := time.Parse(time.RFC1123Z, "Tue, 03 Feb 2026 02:00:00 +0200")
+	date2 = date2.UTC()
 
 	tests := []struct {
 		name          string
 		rssResponse   string
 		statusCode    int
-		expectedRates []models.ExchangeRate
+		expectedRates [][]models.ExchangeRate
 		expectErr     string
 	}{
 		{
-			name:        "Success - Picks Latest item by date",
+			name:        "Success - Returns all items",
 			rssResponse: mockRSS,
 			statusCode:  http.StatusOK,
-			expectedRates: []models.ExchangeRate{
-				{Currency: "AUD", Rate: decimal.RequireFromString("1.68300000"), Date: latestDate},
-				{Currency: "BRL", Rate: decimal.RequireFromString("6.16850000"), Date: latestDate},
-				{Currency: "CAD", Rate: decimal.RequireFromString("1.61160000"), Date: latestDate},
-				{Currency: "CHF", Rate: decimal.RequireFromString("0.91730000"), Date: latestDate},
-				{Currency: "CNY", Rate: decimal.RequireFromString("8.18770000"), Date: latestDate},
-				{Currency: "CZK", Rate: decimal.RequireFromString("24.31200000"), Date: latestDate},
-				{Currency: "DKK", Rate: decimal.RequireFromString("7.46870000"), Date: latestDate},
-				{Currency: "GBP", Rate: decimal.RequireFromString("0.86230000"), Date: latestDate},
-				{Currency: "HKD", Rate: decimal.RequireFromString("9.22010000"), Date: latestDate},
-				{Currency: "HUF", Rate: decimal.RequireFromString("380.40000000"), Date: latestDate},
-				{Currency: "IDR", Rate: decimal.RequireFromString("19790.00000000"), Date: latestDate},
-				{Currency: "ILS", Rate: decimal.RequireFromString("3.64190000"), Date: latestDate},
-				{Currency: "INR", Rate: decimal.RequireFromString("106.37100000"), Date: latestDate},
-				{Currency: "ISK", Rate: decimal.RequireFromString("145.00000000"), Date: latestDate},
-				{Currency: "JPY", Rate: decimal.RequireFromString("183.92000000"), Date: latestDate},
-				{Currency: "KRW", Rate: decimal.RequireFromString("1709.44000000"), Date: latestDate},
-				{Currency: "MXN", Rate: decimal.RequireFromString("20.42450000"), Date: latestDate},
-				{Currency: "MYR", Rate: decimal.RequireFromString("4.64070000"), Date: latestDate},
-				{Currency: "NOK", Rate: decimal.RequireFromString("11.42200000"), Date: latestDate},
-				{Currency: "NZD", Rate: decimal.RequireFromString("1.95320000"), Date: latestDate},
-				{Currency: "PHP", Rate: decimal.RequireFromString("69.73200000"), Date: latestDate},
-				{Currency: "PLN", Rate: decimal.RequireFromString("4.22050000"), Date: latestDate},
-				{Currency: "RON", Rate: decimal.RequireFromString("5.09510000"), Date: latestDate},
-				{Currency: "SEK", Rate: decimal.RequireFromString("10.54850000"), Date: latestDate},
-				{Currency: "SGD", Rate: decimal.RequireFromString("1.49940000"), Date: latestDate},
-				{Currency: "THB", Rate: decimal.RequireFromString("37.25000000"), Date: latestDate},
-				{Currency: "TRY", Rate: decimal.RequireFromString("51.32460000"), Date: latestDate},
-				{Currency: "USD", Rate: decimal.RequireFromString("1.18010000"), Date: latestDate},
-				{Currency: "ZAR", Rate: decimal.RequireFromString("18.82180000"), Date: latestDate},
+			expectedRates: [][]models.ExchangeRate{
+				{
+					{Currency: "AUD", Rate: decimal.RequireFromString("1.70420000"), Date: date1},
+					{Currency: "BRL", Rate: decimal.RequireFromString("6.22220000"), Date: date1},
+					{Currency: "CAD", Rate: decimal.RequireFromString("1.61570000"), Date: date1},
+					{Currency: "CHF", Rate: decimal.RequireFromString("0.91990000"), Date: date1},
+					{Currency: "CNY", Rate: decimal.RequireFromString("8.22100000"), Date: date1},
+					{Currency: "CZK", Rate: decimal.RequireFromString("24.30500000"), Date: date1},
+					{Currency: "DKK", Rate: decimal.RequireFromString("7.46910000"), Date: date1},
+					{Currency: "GBP", Rate: decimal.RequireFromString("0.86580000"), Date: date1},
+					{Currency: "HKD", Rate: decimal.RequireFromString("9.24840000"), Date: date1},
+					{Currency: "HUF", Rate: decimal.RequireFromString("381.20000000"), Date: date1},
+					{Currency: "IDR", Rate: decimal.RequireFromString("19890.00000000"), Date: date1},
+					{Currency: "ILS", Rate: decimal.RequireFromString("3.67380000"), Date: date1},
+					{Currency: "INR", Rate: decimal.RequireFromString("108.41700000"), Date: date1},
+					{Currency: "ISK", Rate: decimal.RequireFromString("145.00000000"), Date: date1},
+					{Currency: "JPY", Rate: decimal.RequireFromString("183.59000000"), Date: date1},
+					{Currency: "KRW", Rate: decimal.RequireFromString("1719.74000000"), Date: date1},
+					{Currency: "MXN", Rate: decimal.RequireFromString("20.61310000"), Date: date1},
+					{Currency: "MYR", Rate: decimal.RequireFromString("4.66730000"), Date: date1},
+					{Currency: "NOK", Rate: decimal.RequireFromString("11.46550000"), Date: date1},
+					{Currency: "NZD", Rate: decimal.RequireFromString("1.97050000"), Date: date1},
+					{Currency: "PHP", Rate: decimal.RequireFromString("69.75400000"), Date: date1},
+					{Currency: "PLN", Rate: decimal.RequireFromString("4.21730000"), Date: date1},
+					{Currency: "RON", Rate: decimal.RequireFromString("5.09600000"), Date: date1},
+					{Currency: "SEK", Rate: decimal.RequireFromString("10.59350000"), Date: date1},
+					{Currency: "SGD", Rate: decimal.RequireFromString("1.50550000"), Date: date1},
+					{Currency: "THB", Rate: decimal.RequireFromString("37.43200000"), Date: date1},
+					{Currency: "TRY", Rate: decimal.RequireFromString("51.49410000"), Date: date1},
+					{Currency: "USD", Rate: decimal.RequireFromString("1.18400000"), Date: date1},
+					{Currency: "ZAR", Rate: decimal.RequireFromString("18.97740000"), Date: date1},
+				},
+				{
+					{Currency: "AUD", Rate: decimal.RequireFromString("1.68300000"), Date: date2},
+					{Currency: "BRL", Rate: decimal.RequireFromString("6.16850000"), Date: date2},
+					{Currency: "CAD", Rate: decimal.RequireFromString("1.61160000"), Date: date2},
+					{Currency: "CHF", Rate: decimal.RequireFromString("0.91730000"), Date: date2},
+					{Currency: "CNY", Rate: decimal.RequireFromString("8.18770000"), Date: date2},
+					{Currency: "CZK", Rate: decimal.RequireFromString("24.31200000"), Date: date2},
+					{Currency: "DKK", Rate: decimal.RequireFromString("7.46870000"), Date: date2},
+					{Currency: "GBP", Rate: decimal.RequireFromString("0.86230000"), Date: date2},
+					{Currency: "HKD", Rate: decimal.RequireFromString("9.22010000"), Date: date2},
+					{Currency: "HUF", Rate: decimal.RequireFromString("380.40000000"), Date: date2},
+					{Currency: "IDR", Rate: decimal.RequireFromString("19790.00000000"), Date: date2},
+					{Currency: "ILS", Rate: decimal.RequireFromString("3.64190000"), Date: date2},
+					{Currency: "INR", Rate: decimal.RequireFromString("106.37100000"), Date: date2},
+					{Currency: "ISK", Rate: decimal.RequireFromString("145.00000000"), Date: date2},
+					{Currency: "JPY", Rate: decimal.RequireFromString("183.92000000"), Date: date2},
+					{Currency: "KRW", Rate: decimal.RequireFromString("1709.44000000"), Date: date2},
+					{Currency: "MXN", Rate: decimal.RequireFromString("20.42450000"), Date: date2},
+					{Currency: "MYR", Rate: decimal.RequireFromString("4.64070000"), Date: date2},
+					{Currency: "NOK", Rate: decimal.RequireFromString("11.42200000"), Date: date2},
+					{Currency: "NZD", Rate: decimal.RequireFromString("1.95320000"), Date: date2},
+					{Currency: "PHP", Rate: decimal.RequireFromString("69.73200000"), Date: date2},
+					{Currency: "PLN", Rate: decimal.RequireFromString("4.22050000"), Date: date2},
+					{Currency: "RON", Rate: decimal.RequireFromString("5.09510000"), Date: date2},
+					{Currency: "SEK", Rate: decimal.RequireFromString("10.54850000"), Date: date2},
+					{Currency: "SGD", Rate: decimal.RequireFromString("1.49940000"), Date: date2},
+					{Currency: "THB", Rate: decimal.RequireFromString("37.25000000"), Date: date2},
+					{Currency: "TRY", Rate: decimal.RequireFromString("51.32460000"), Date: date2},
+					{Currency: "USD", Rate: decimal.RequireFromString("1.18010000"), Date: date2},
+					{Currency: "ZAR", Rate: decimal.RequireFromString("18.82180000"), Date: date2},
+				},
 			},
 		},
 		{
@@ -132,7 +167,7 @@ func TestGetLatestRates(t *testing.T) {
 
 			fetcher := NewBankLatviaFetcher(slog.Default(), ts.Client(), ts.URL)
 
-			rates, err := fetcher.GetLatestRates(t.Context())
+			rates, err := fetcher.GetAllRates(t.Context())
 
 			if tt.expectErr != "" {
 				require.Error(t, err)
@@ -141,45 +176,64 @@ func TestGetLatestRates(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.ElementsMatch(t, tt.expectedRates, rates)
+			require.Equal(t, len(tt.expectedRates), len(rates))
+			for i := range rates {
+				require.ElementsMatch(t, tt.expectedRates[i], rates[i])
+			}
 		})
 	}
 }
 
-func TestGetLatestCurrencyRate(t *testing.T) {
+func TestGetCurrencyRates(t *testing.T) {
 	t.Parallel()
 
-	latestDate, _ := time.Parse(time.RFC1123Z, "Tue, 03 Feb 2026 02:00:00 +0200")
-	latestDate = latestDate.UTC()
+	date1, _ := time.Parse(time.RFC1123Z, "Mon, 02 Feb 2026 02:00:00 +0200")
+	date1 = date1.UTC()
+	date2, _ := time.Parse(time.RFC1123Z, "Tue, 03 Feb 2026 02:00:00 +0200")
+	date2 = date2.UTC()
 
 	tests := []struct {
-		name         string
-		currency     string
-		rssResponse  string
-		statusCode   int
-		expectedRate models.ExchangeRate
-		expectErr    string
+		name          string
+		currency      string
+		rssResponse   string
+		statusCode    int
+		expectedRates []models.ExchangeRate
+		expectErr     string
 	}{
 		{
-			name:        "Success - Returns latest rate for USD",
+			name:        "Success - Returns all rates for USD",
 			currency:    "USD",
 			rssResponse: mockRSS,
 			statusCode:  http.StatusOK,
-			expectedRate: models.ExchangeRate{
-				Currency: "USD",
-				Rate:     decimal.RequireFromString("1.18010000"),
-				Date:     latestDate,
+			expectedRates: []models.ExchangeRate{
+				{
+					Currency: "USD",
+					Rate:     decimal.RequireFromString("1.18400000"),
+					Date:     date1,
+				},
+				{
+					Currency: "USD",
+					Rate:     decimal.RequireFromString("1.18010000"),
+					Date:     date2,
+				},
 			},
 		},
 		{
-			name:        "Success - Returns latest rate for GBP",
+			name:        "Success - Returns all rates for GBP",
 			currency:    "GBP",
 			rssResponse: mockRSS,
 			statusCode:  http.StatusOK,
-			expectedRate: models.ExchangeRate{
-				Currency: "GBP",
-				Rate:     decimal.RequireFromString("0.86230000"),
-				Date:     latestDate,
+			expectedRates: []models.ExchangeRate{
+				{
+					Currency: "GBP",
+					Rate:     decimal.RequireFromString("0.86580000"),
+					Date:     date1,
+				},
+				{
+					Currency: "GBP",
+					Rate:     decimal.RequireFromString("0.86230000"),
+					Date:     date2,
+				},
 			},
 		},
 		{
@@ -210,7 +264,7 @@ func TestGetLatestCurrencyRate(t *testing.T) {
 
 			fetcher := NewBankLatviaFetcher(slog.Default(), ts.Client(), ts.URL)
 
-			rate, err := fetcher.GetLatestCurrencyRate(t.Context(), tt.currency)
+			rates, err := fetcher.GetCurrencyRates(t.Context(), tt.currency)
 
 			if tt.expectErr != "" {
 				require.Error(t, err)
@@ -220,7 +274,7 @@ func TestGetLatestCurrencyRate(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tt.expectedRate, rate)
+			require.ElementsMatch(t, tt.expectedRates, rates)
 		})
 	}
 }

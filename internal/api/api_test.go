@@ -60,8 +60,7 @@ func TestLatestRateHandler(t *testing.T) {
 						"rate": "99.9",
 						"date": "` + now.Format(time.RFC3339) + `"
 					}
-				],
-				"updated_at": "` + now.Format(time.RFC3339) + `"
+				]
 			}`,
 		},
 		{

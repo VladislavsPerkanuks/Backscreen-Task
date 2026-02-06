@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/VladislavsPerkanuks/Backscreen-Task/internal/models"
 )
@@ -30,8 +29,7 @@ func NewAPI(logger *slog.Logger, rateReader RateReader) *API {
 
 // LatestRatesResponse represents the API response for latest rates
 type LatestRatesResponse struct {
-	Rates     []models.ExchangeRate `json:"rates"`
-	UpdatedAt time.Time             `json:"updated_at"`
+	Rates []models.ExchangeRate `json:"rates"`
 }
 
 // HistoricalRatesResponse represents the API response for historical rates
@@ -78,8 +76,7 @@ func (a *API) LatestRateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.jsonResponse(w, http.StatusOK, LatestRatesResponse{
-		Rates:     rates,
-		UpdatedAt: rates[0].Date,
+		Rates: rates,
 	})
 }
 

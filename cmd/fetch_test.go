@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"context"
-	"math/rand/v2"
-	"slices"
 	"testing"
 	"time"
 
@@ -16,18 +14,19 @@ type mockFetcher struct {
 	latestRates []models.ExchangeRate
 }
 
-func (m *mockFetcher) GetLatestRates(ctx context.Context) ([]models.ExchangeRate, error) {
-	return m.latestRates, nil
+func (m *mockFetcher) GetAllRates(ctx context.Context) ([][]models.ExchangeRate, error) {
+	return [][]models.ExchangeRate{m.latestRates}, nil
 }
 
-func (m *mockFetcher) GetLatestCurrencyRate(ctx context.Context, currency string) (models.ExchangeRate, error) {
-	// wait for a short time to simulate network delay
-	time.Sleep(time.Duration(rand.IntN(500)) * time.Millisecond)
-	idx := slices.IndexFunc(m.latestRates, func(rate models.ExchangeRate) bool {
-		return rate.Currency == currency
-	})
+func (m *mockFetcher) GetCurrencyRates(ctx context.Context, currency string) ([]models.ExchangeRate, error) {
+	var rates []models.ExchangeRate
+	for _, rate := range m.latestRates {
+		if rate.Currency == currency {
+			rates = append(rates, rate)
+		}
+	}
 
-	return m.latestRates[idx], nil
+	return rates, nil
 }
 
 func (m *mockFetcher) GetHistoricalRates(ctx context.Context, currency string) ([]models.ExchangeRate, error) {
@@ -35,6 +34,10 @@ func (m *mockFetcher) GetHistoricalRates(ctx context.Context, currency string) (
 }
 
 func (m *mockFetcher) SaveRate(ctx context.Context, rate models.ExchangeRate) error {
+	return nil
+}
+
+func (m *mockFetcher) SaveRates(ctx context.Context, rates []models.ExchangeRate) error {
 	return nil
 }
 
